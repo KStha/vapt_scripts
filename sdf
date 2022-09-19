@@ -150,7 +150,7 @@ done
 
 REQ_UNMET_DEP_COUNT=0
 
-for cmd in "amass" "subfinder" "httpx" "notify-send"; do
+for cmd in "amass" "subfinder" "httpx"; do
     if ! command -v "${cmd}" >/dev/null 2>&1; then
         error "The command '${cmd}' not found!"
         REQ_UNMET_DEP_COUNT=$(( REQ_UNMET_DEP_COUNT + 1 ))
