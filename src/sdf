@@ -51,7 +51,7 @@ find_subdomains() {
     send_notification="${3}"
     run_httpx="${4}"
 
-    printf "%s\n" "Finding all the subdomains for: ${domain}" >&2
+    printf "%s\n\n" "Finding all the subdomains for: ${domain}" >&2
 
     [ ! -d "${sdf_dir}/${domain}/" ] && mkdir -p "${sdf_dir}/${domain}/"
 
@@ -74,7 +74,7 @@ find_subdomains() {
         > "${sdf_dir}/${domain}/subdomains.total.txt"
 
     if [ "${run_httpx}" = 1 ]; then
-        printf "\n%s\n" "Checking for alive subdomains for: ${domain}" >&2
+        printf "\n%s\n\n" "Checking for alive subdomains for: ${domain}" >&2
 
         [ ! -d "${sdf_dir}/${domain}/httpx/" ] && mkdir "${sdf_dir}/${domain}/httpx/" && \
             httpx -p 443,80,8443,8000,8008,8080,8888 -t 100 -nc -silent -stats \
