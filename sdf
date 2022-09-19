@@ -1,0 +1,184 @@
+#!/bin/sh
+
+# Find and probe subdomains
+
+set -eu
+
+
+die() {
+    printf "%s\n" "${2}" >&2
+    exit "${1}"
+}
+
+
+error() {
+    printf "%s\n" "${1}" >&2
+}
+
+
+init() {
+    if ! command -v "go" >/dev/null 2>&1; then
+        die 1 "The command 'go' not found!"
+    fi
+
+    while IFS="|" read -r cmd msg; do
+        if ! command -v "${cmd}" >/dev/null 2>&1; then
+            [ -n "${msg}" ] && msg=" ${msg}" || msg=""
+            error "The command '${cmd}' not found!${msg}"
+        fi
+    done <<EOF
+notify-send|Notifications will not appear without it and a notification daemon!
+EOF
+
+    printf "%s\n" "Installing required applications from repository..."
+
+    [ ! -d "${HOME}/bin/" ] && mkdir "${HOME}/bin/"
+
+    printf "\n%s\n\n" "Installing OWASP Amass..." && \
+        go install -v github.com/OWASP/Amass/v3/...@master
+
+    printf "\n%s\n\n" "Installing subfinder..." && \
+        go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+
+    printf "\n%s\n\n" "Installing httpx..." && \
+        go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+}
+
+
+find_subdomains() {
+    sdf_dir="${1}"
+    domain="${2}"
+    send_notification="${3}"
+    run_httpx="${4}"
+
+    printf "%s\n" "Finding all the subdomains for: ${domain}" >&2
+
+    [ ! -d "${sdf_dir}/${domain}/" ] && mkdir -p "${sdf_dir}/${domain}/"
+
+    [ ! -d "${sdf_dir}/${domain}/amass_output/" ] && \
+        mkdir -p "${sdf_dir}/${domain}/amass_output/"
+
+    # shellcheck disable=SC2086    # Because we want the options to split
+    amass enum -v -passive ${amass_active_options} -nocolor -dir "${sdf_dir}/${domain}/amass_output/" \
+        -d "${domain}" 2>&1 | tee "${sdf_dir}/${domain}/amass_output/summary.txt" >&2
+
+    [ ! -d "${sdf_dir}/${domain}/subfinder_output/" ] && \
+        mkdir -p "${sdf_dir}/${domain}/subfinder_output/"
+
+    subfinder -v -all -nc -t 100 -d "${domain}" \
+        -o "${sdf_dir}/${domain}/subfinder_output/subfinder.txt" 2>&1 >/dev/null | \
+        tee "${sdf_dir}/${domain}/subfinder_output/summary.txt" >&2
+
+    sort "${sdf_dir}/${domain}/subfinder_output/subfinder.txt" \
+        "${sdf_dir}/${domain}/amass_output/amass.txt" | uniq \
+        > "${sdf_dir}/${domain}/subdomains.total.txt"
+
+    if [ "${run_httpx}" = 1 ]; then
+        printf "\n%s\n" "Checking for alive subdomains for: ${domain}" >&2
+
+        [ ! -d "${sdf_dir}/${domain}/httpx/" ] && mkdir "${sdf_dir}/${domain}/httpx/" && \
+            httpx -p 443,80,8443,8000,8008,8080,8888 -t 100 -nc -silent -stats \
+            -jarm -asn -sc -cl -ct -location -title -server -td -method -ip \
+            -cname -cdn -probe -ec -retries 1 -l "${sdf_dir}/${domain}/subdomains.total.txt" | \
+            tee "${sdf_dir}/${domain}/httpx/httpx.txt" | cut -d " " -f 1 | \
+            sed -E -e "s/^(https?:\/\/)//g" -e "s/(:[0-9]*)$//g" | sort | uniq | \
+            tee "${sdf_dir}/${domain}/subdomains.alive.txt"
+    fi
+
+    if [ "${run_httpx}" != 1 ]; then
+        cat "${sdf_dir}/${domain}/subdomains.total.txt"
+    fi
+
+    printf "\n%s\n" "${script_name} completed for ${domain}! All the files are stored in: ${sdf_dir}/${domain}/" >&2
+
+    [ "${send_notification}" = 1 ] && \
+        notify-send -t 0 "Finding subdomains completed for ${domain}!" \
+        "All the files are stored in: ${sdf_dir}/${domain}/"
+}
+
+
+script_name="sdf"
+sdf_dir="${HOME}/sdf_files"
+domains=""
+notify=0
+amass_active_options=""
+check_alive=0
+override_existing_domain=0
+
+
+while [ "$#" -gt 0 ]; do
+    case "${1}" in
+        -h|--help)
+            ;;
+        -d|--dir)
+            if [ -f "${2}" ]; then
+                die 1 "${2} is a file!"
+            else
+                sdf_dir="${2}" && mkdir -p "${sdf_dir}" && shift
+            fi
+            ;;
+        --active)
+            amass_active_options="-brute -alts"
+            ;;
+        --alive)
+            check_alive=1
+            ;;
+        --init)
+            init && exit 0
+            ;;
+        -n|--notify)
+            if ! command -v "notify-send" >/dev/null 2>&1; then
+                die 1 "The command 'notify-send' not found!"
+            else
+                notify=1
+            fi
+            ;;
+        -oed|--override_existing_domain)
+            override_existing_domain=1
+            ;;
+        -*)
+            die 1 "Invalid parameter: ${1}"
+            ;;
+        *)
+            new_domain="$(printf "%s" "${1}" | sed -E "s/https?:\/\///g")"
+            domains="${domains} ${new_domain}"
+            ;;
+    esac
+    shift
+done
+
+
+REQ_UNMET_DEP_COUNT=0
+
+for cmd in "amass" "subfinder" "httpx" "notify-send"; do
+    if ! command -v "${cmd}" >/dev/null 2>&1; then
+        error "The command '${cmd}' not found!"
+        REQ_UNMET_DEP_COUNT=$(( REQ_UNMET_DEP_COUNT + 1 ))
+    fi
+done
+
+printf "\n"
+
+[ "${REQ_UNMET_DEP_COUNT}" -gt 0 ] && die 1 "Please run 'sdf --init'"
+
+
+for domain in ${domains}; do
+    if [ -d "${sdf_dir}/${domain}" ]; then
+        if [ "${override_existing_domain}" = 0 ]; then
+            printf "%s" "The folder for ${domain} already exists! Overwrite it? [y|N] " >&2
+            read -r "override_existing_domain_ans"
+        else
+            override_existing_domain_ans="y"
+        fi
+
+        if [ "${override_existing_domain_ans}" = "y" ] || [ "${override_existing_domain_ans}" = "Y" ]; then
+            rm -rf "${sdf_dir:?}/${domain}"
+        else
+            continue
+        fi
+
+        unset override_existing_domain_ans
+    fi
+
+    find_subdomains "${sdf_dir}" "${domain}" "${notify}" "${check_alive}"
+done
