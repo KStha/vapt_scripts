@@ -81,7 +81,6 @@ find_subdomains() {
 script_name="sdf"
 sdf_dir="${HOME}/sdf_files"
 domains=""
-notify=0
 amass_active_options=""
 check_alive=0
 override_existing_domain=0
