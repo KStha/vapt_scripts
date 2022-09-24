@@ -140,6 +140,7 @@ for domain in ${domains}; do
         if [ "${override_existing_domain}" = 0 ]; then
             printf "%s" "The folder for ${domain} already exists! Overwrite it? [y|N] " >&2
             read -r "override_existing_domain_ans"
+            printf "\n"
         else
             override_existing_domain_ans="y"
         fi
