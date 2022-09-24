@@ -21,15 +21,6 @@ init() {
         die 1 "The command 'go' not found!"
     fi
 
-    while IFS="|" read -r cmd msg; do
-        if ! command -v "${cmd}" >/dev/null 2>&1; then
-            [ -n "${msg}" ] && msg=" ${msg}" || msg=""
-            error "The command '${cmd}' not found!${msg}"
-        fi
-    done <<EOF
-notify-send|Notifications will not appear without it and a notification daemon!
-EOF
-
     printf "%s\n" "Installing required applications from repository..."
 
     [ ! -d "${HOME}/bin/" ] && mkdir "${HOME}/bin/"
@@ -48,8 +39,7 @@ EOF
 find_subdomains() {
     sdf_dir="${1}"
     domain="${2}"
-    send_notification="${3}"
-    run_httpx="${4}"
+    run_httpx="${3}"
 
     printf "%s\n\n" "Finding all the subdomains for: ${domain}" >&2
 
@@ -78,22 +68,13 @@ find_subdomains() {
 
         [ ! -d "${sdf_dir}/${domain}/httpx/" ] && mkdir "${sdf_dir}/${domain}/httpx/" && \
             httpx -p 443,80,8443,8000,8008,8080,8888 -t 100 -nc -silent -stats -favicon \
-            -jarm -asn -sc -cl -ct -location -title -server -td -method -ip \
-            -cname -cdn -ec -retries 1 -l "${sdf_dir}/${domain}/subdomains.total.txt" | \
+            -jarm -asn -sc -cl -ct -location -title -server -td -method -ip -cname -cdn \
+            -ec -retries 1 -l "${sdf_dir}/${domain}/subdomains.total.txt" | \
             tee "${sdf_dir}/${domain}/httpx/httpx.txt" | cut -d " " -f 1 | \
-            sed -E -e "s/^(https?:\/\/)//g" -e "s/(:[0-9]*)$//g" | sort | uniq | \
-            tee "${sdf_dir}/${domain}/subdomains.alive.txt"
-    fi
-
-    if [ "${run_httpx}" != 1 ]; then
-        cat "${sdf_dir}/${domain}/subdomains.total.txt"
+            sed -E "s/^(https?:\/\/)//g" | sort | uniq | tee "${sdf_dir}/${domain}/subdomains.alive.txt"
     fi
 
     printf "\n%s\n" "${script_name} completed for ${domain}! All the files are stored in: ${sdf_dir}/${domain}/" >&2
-
-    [ "${send_notification}" = 1 ] && \
-        notify-send -t 0 "Finding subdomains completed for ${domain}!" \
-        "All the files are stored in: ${sdf_dir}/${domain}/"
 }
 
 
@@ -125,13 +106,6 @@ while [ "$#" -gt 0 ]; do
             ;;
         --init)
             init && exit 0
-            ;;
-        -n|--notify)
-            if ! command -v "notify-send" >/dev/null 2>&1; then
-                die 1 "The command 'notify-send' not found!"
-            else
-                notify=1
-            fi
             ;;
         -oed|--override_existing_domain)
             override_existing_domain=1
@@ -180,5 +154,5 @@ for domain in ${domains}; do
         unset override_existing_domain_ans
     fi
 
-    find_subdomains "${sdf_dir}" "${domain}" "${notify}" "${check_alive}"
+    find_subdomains "${sdf_dir}" "${domain}" "${check_alive}"
 done
