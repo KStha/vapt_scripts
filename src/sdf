@@ -55,6 +55,8 @@ find_subdomains() {
     [ ! -d "${sdf_dir}/${domain}/subfinder_output/" ] && \
         mkdir -p "${sdf_dir}/${domain}/subfinder_output/"
 
+    printf "\n"
+
     subfinder -v -all -nc -t 100 -d "${domain}" \
         -o "${sdf_dir}/${domain}/subfinder_output/subfinder.txt" 2>&1 >/dev/null | \
         tee "${sdf_dir}/${domain}/subfinder_output/summary.txt" >&2
