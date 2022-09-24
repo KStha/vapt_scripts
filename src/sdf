@@ -75,6 +75,8 @@ find_subdomains() {
             tee "${sdf_dir}/${domain}/httpx/httpx.txt" | cut -d " " -f 1 | \
             sed -E "s/^(https?:\/\/)//g" | sort | uniq | tee "${sdf_dir}/${domain}/subdomains.alive.txt"
     fi
+    
+    [ "${run_httpx}" != 1 ] && cat "${sdf_dir}/${domain}/subdomains.total.txt"
 
     printf "\n%s\n" "${script_name} completed for ${domain}! All the files are stored in: ${sdf_dir}/${domain}/" >&2
 }
