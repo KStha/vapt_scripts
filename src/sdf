@@ -57,7 +57,7 @@ find_subdomains() {
 
     printf "\n"
 
-    subfinder -v -all -nc -t 100 -d "${domain}" \
+    subfinder -v -all -nc -t 100 -d "${domain}" -es sitedossier \
         -o "${sdf_dir}/${domain}/subfinder_output/subfinder.txt" 2>&1 >/dev/null | \
         tee "${sdf_dir}/${domain}/subfinder_output/summary.txt" >&2
 
