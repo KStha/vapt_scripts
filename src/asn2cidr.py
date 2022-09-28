@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-""""""
+"""Find All CIDRs in an ASN."""
 
 import argparse
 import sys
@@ -153,7 +153,6 @@ def main(argv: list[str]) -> None:
 
 
 if __name__ == "__main__":
-
     session = session()
     adapter = TLSv2HttpAdapter(OP_NO_TLSv1 | OP_NO_TLSv1_1)
     session.mount("https://", adapter)
