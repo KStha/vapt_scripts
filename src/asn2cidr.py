@@ -185,6 +185,7 @@ def main(argv: list[str]) -> None:
 
         asns = asns_stdin + asns
 
+    asns = [re.sub(r"^(AS)", "", asn, flags=re.IGNORECASE) for asn in asns]
     asns_set: set[str] = set(asns)
     asns = list(asns_set)
 
