@@ -69,7 +69,7 @@ find_subdomains() {
         printf "\n%s\n\n" "Checking for alive subdomains for: ${domain}" >&2
 
         [ ! -d "${sdf_dir}/${domain}/httpx/" ] && mkdir "${sdf_dir}/${domain}/httpx/" && \
-            httpx -p 443,80,8443,8000,8008,8080,8888 -t 100 -nc -silent -stats \
+            httpx -p 443,80,8443,8000,8008,8080,8888,9001,9002,9003,9000 -t 100 -nc -silent -stats \
             -jarm -asn -sc -cl -ct -location -title -server -td -method -ip -cname -cdn \
             -ec -retries 1 -l "${sdf_dir}/${domain}/subdomains.total.txt" | \
             tee "${sdf_dir}/${domain}/httpx/httpx.txt" | cut -d " " -f 1 | \
