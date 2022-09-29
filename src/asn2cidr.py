@@ -3,21 +3,16 @@
 """Find all CIDRs of ASNs."""
 
 import argparse
-import sys
 import re
-
+import sys
+from ipaddress import IPv4Network, IPv6Network, ip_network
+from ssl import CERT_REQUIRED, PROTOCOL_TLS, OP_NO_TLSv1, OP_NO_TLSv1_1
 from typing import Union
-from ipaddress import ip_network
-from ipaddress import IPv4Network
-from ipaddress import IPv6Network
-from ssl import PROTOCOL_TLS
-from ssl import CERT_REQUIRED
-from ssl import OP_NO_TLSv1
-from ssl import OP_NO_TLSv1_1
+
 from requests import session
 from requests.adapters import HTTPAdapter
-from urllib3.util import ssl_
 from urllib3.poolmanager import PoolManager
+from urllib3.util import ssl_
 
 
 # https://requests.readthedocs.io/en/latest/user/advanced/#example-specific-ssl-version
@@ -74,7 +69,9 @@ def get_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_intermixed_args(argv)
 
 
-def get_parent_cidr(sorted_cidr_list: list[str]) -> list[Union[IPv4Network | IPv6Network]]:
+def get_parent_cidr(
+    sorted_cidr_list: list[str],
+) -> list[Union[IPv4Network | IPv6Network]]:
     """Get Parent CIDR from a list of sorted CIDRs."""
     unique_cidr: list[Union[IPv4Network | IPv6Network]] = []
     cidr_add: bool = True
