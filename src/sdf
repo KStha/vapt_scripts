@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # Find and probe subdomains
+# Test
 
 set -eu
 
